@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>AI Comp Games</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="/style.css" rel=stylesheet>
+<script src="/shared.js" type="text/javascript"></script>
+<script>
+
+let teamNames = undefined;
+let myTeam = undefined;
+let teammates = undefined;
+let invites = undefined;
+let jwt = undefined;
+
+window.onload = function() {
+    clearError();
+    if (!requireLogin()) return;
+    jwt = parseJwt(localStorage.getItem('jwt'));
+    // Get everything in parallel
+    request('GET', 'teams/', '', function() {
+        let response = JSON.parse(this.responseText);
+        if (!response.names) {
+            displayError('Server did not respond with team names');
+            return;
+        }
+        teamNames = response.names;
+        ready();
+    });
+    request('GET', `users/${jwt.id}`, '', function() {
+        let response = JSON.parse(this.responseText);
+        if (!response.user) {
+            displayError('Server did not respond with user');
+            return;
+        }
+        myTeam = response.user.teamName || null;
+        ready();
+    });
+    request('GET', 'users/team', '', function() {
+        let response = JSON.parse(this.responseText);
+        teammates = response.teammates || null;
+        ready();
+    });
+    request('GET', `invites/users/${jwt.id}`, '', function() {
+        let response = JSON.parse(this.responseText);
+        invites = response.invites || null;
+        ready();
+    });
+}
+
+function ready() {
+    if (teamNames !== undefined && myTeam !== undefined && teammates !== undefined && invites !== undefined) {
+        createTeamRows(teamNames, myTeam);
+        if (myTeam) {
+            document.getElementById('team-name').innerText = `You are on team ${myTeam}`;
+            document.getElementById('teammates-box').removeAttribute('hidden');
+            createTeammateRows(teammates);
+        } else {
+            document.getElementById('team-name').innerText = 'You are currently not on a team';
+            document.getElementById('create-team').removeAttribute('hidden');
+            document.getElementById('invite-box').removeAttribute('hidden');
+            createInviteRows(invites)
+        }
+    }
+}
+
+function createTeamRows(teamNames, myTeam) {
+    let container = document.getElementById('teams');
+    for (let name of teamNames) {
+        let row = document.createElement('tr');
+        let cell = document.createElement('td');
+        cell.innerText = name;
+        row.appendChild(cell);
+        container.appendChild(row);
+    }
+}
+
+function createTeammateRows(teammates) {
+    let container = document.getElementById('teammates');
+    for (let name of teammates) {
+        let row = document.createElement('tr');
+        let usernameCell = document.createElement('td');
+        usernameCell.innerText = name;
+        let buttonCell = document.createElement('td');
+        let kickButton = document.createElement('button');
+        kickButton.innerText = 'Kick';
+        kickButton.onclick = function() {
+            request('DELETE', `teams/${name}`, '', function() {
+                // We only get here if the request succeeded
+                location.reload();
+            });
+        }
+        buttonCell.appendChild(kickButton);
+        row.appendChild(usernameCell);
+        row.appendChild(buttonCell);
+        container.appendChild(row);
+    }
+}
+
+function createInviteRows(invites) {
+    let container = document.getElementById('invites');
+    let validInvites = [];
+    for (let invite of invites) {
+        if (!invite.is_completed) validInvites.push(invite);
+    }
+    if (validInvites.length == 0) {
+        let row = document.createElement('tr')
+        let teamNameCell = document.createElement('td');
+        teamNameCell.innerText = 'No invites!';
+        row.appendChild(teamNameCell);
+        container.appendChild(row);
+    }
+    for (let invite of validInvites) {
+        if (invite.is_completed) continue;
+        let row = document.createElement('tr')
+        request('GET', `teams/id/${invite.team_id}`, '', function() {
+            let response = JSON.parse(this.responseText);
+            if (!response.team) {
+                displayError('Server did not respond with invite team name');
+                return;
+            }
+            let teamNameCell = document.createElement('td');
+            teamNameCell.innerText = response.team.name;
+            let buttonCell = document.createElement('td');
+            let acceptButton = document.createElement('button');
+            acceptButton.innerText = 'Accept';
+            acceptButton.onclick = function() {
+                request('PUT', 'invites', {
+                    inviteId: invite.id,
+                    accepted: true,
+                }, function() {
+                    // We only get here if the request succeeded
+                    location.reload();
+                });
+            }
+            let declineButton = document.createElement('button');
+            declineButton.innerText = 'Decline';
+            declineButton.onclick = function() {
+                request('PUT', 'invites', {
+                    inviteId: invite.id,
+                    accepted: false,
+                }, function() {
+                    // We only get here if the request succeeded
+                    location.reload();
+                });
+            }
+            buttonCell.appendChild(acceptButton);
+            buttonCell.appendChild(declineButton);
+            row.appendChild(teamNameCell);
+            row.appendChild(buttonCell);
+            container.appendChild(row);
+        });
+    }
+}
+
+function createTeam() {
+    let newTeamName = document.getElementById('new-team-name').value;
+    request('POST', 'teams/', {
+        name: newTeamName,
+        teamCaptainId: jwt.id,
+    }, function() {
+        // We only get here if the request succeeded
+        location.reload();
+    });
+}
+
+function invite() {
+    let invitedUsername = document.getElementById('invited').value;
+    request('POST', 'invites/', {
+        teamName: myTeam,
+        username: invitedUsername,
+    }, function() {
+        // We only get here if the request succeeded
+        location.reload();
+    });
+}
+
+</script>
+</head>
+<body>
+    <div class='navbar'>
+        <div class='navbar-section'>
+            <a href="/index.html">AI Comp games</a>
+        </div>
+        <div class='navbar-section'>
+            <a href="/teams.html">Teams</a>
+            <a href="/submit.html">Submit code</a>
+            <a href="/battle.html">Battle</a>
+        </div>
+        <div class='navbar-section'>
+            <a href="/login.html">Log in</a>
+            <a href="/register.html">Register</a>
+        </div>
+    </div>
+    <div class='content-wrapper'>
+        <div id='error' class='error'>Javascript must be enabled for this page to work</div>
+        <div id='team-name' class='big'></div>
+        <div id='invite-box' class='box' hidden>
+            <div class='big'>Team invitations:</div>
+            <table id='invites'></table>
+        </div>
+        <div id='create-team' class='box' hidden>
+            <div class='big'>Create a new team</div>
+            <input type='text' id='new-team-name' placeholder='Team name' />
+            <button onclick='createTeam()'>Create team</button>
+        </div>
+        <div id='teammates-box' class='box content-wrapper' hidden>
+            <div class='big'>Teammates:</div>
+            <table id='teammates'></table>
+            <div style='padding-top: 1em'>
+                <input type='text' id='invited-name' placeholder='username'/>
+                <button onclick='invite()'>Invite to team</button>
+            </div>
+        </div>
+        <div class='box'>
+            <div class='big'>Teams:</div>
+            <table id='teams'></table>
+        </div>
+    </div>
+</body>

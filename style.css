@@ -1,0 +1,74 @@
+.content-wrapper {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.navbar {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background: #000;
+    margin-bottom: 2em;
+}
+.navbar-section {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+.navbar-section > a {
+    font-weight: bold;
+    color: #5f5;
+    margin-left: 1em;
+    margin-right: 1em;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+.big {
+    font-size: larger;
+    font-weight: bold;
+    margin-bottom: 0.5em;
+}
+.box {
+    border-width: 2px;
+    border-color: black;
+    border-style: solid;
+    width: fit-content;
+    padding: 1em;
+    margin: 1em;
+}
+table {
+    border-spacing: 0;
+    border-collapse: collapse;
+    border: 1px solid black;
+}
+tr {
+    border-bottom: 1px solid black;
+}
+tr:nth-child(even) {
+    background: #EEE;
+}
+tr:nth-child(odd) {
+    background: #CCC;
+}
+td {
+    padding: 0.5em;
+}
+th {
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+}
+.error {
+    font-size: larger;
+    color: #f00;
+    font-weight: bold;
+    margin-bottom: 1em;
+    background: #fcc;
+    padding: 0.5em;
+}

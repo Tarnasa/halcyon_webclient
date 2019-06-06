@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>AI Comp Games</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="/style.css" rel=stylesheet>
+<script src="/shared.js" type="text/javascript"></script>
+<script>
+
+let submissions = undefined;
+let myTeam = undefined;
+let games = undefined;
+let gamesPage = 2;
+let stats = undefined;
+let jwt = undefined;
+
+window.onload = function() {
+    clearError();
+    if (!requireLogin()) return;
+    jwt = parseJwt(localStorage.getItem('jwt'));
+    // Get everything in parallel
+    request('GET', 'submissions/', '', function() {
+        let response = JSON.parse(this.responseText);
+        submissions = response.submissions;
+        ready();
+    });
+    request('GET', `users/${jwt.id}`, '', function() {
+        let response = JSON.parse(this.responseText);
+        if (!response.user) {
+            displayError('Server did not respond with user');
+            return;
+        }
+        myTeam = response.user.teamName || null;
+        ready();
+    });
+    request('GET', `games/?page=1&pageSize=50`, '', function() {
+        let response = JSON.parse(this.responseText);
+        if (!response.games) {
+            displayError('Server did not respond with games');
+            return;
+        }
+        games = response.games || null;
+        ready();
+    });
+    request('GET', `stats/teamStats/`, '', function() {
+        let response = JSON.parse(this.responseText);
+        stats = response.stats || null;
+        ready();
+    });
+}
+
+function ready() {
+    if (submissions !== undefined && myTeam !== undefined && games !== undefined && stats !== undefined) {
+        createGameRows(games);
+        createStatsRows(stats);
+        document.getElementById('team-name').innerText = `${myTeam}'s games played`;
+    }
+}
+
+function createGameRows(games) {
+    let container = document.getElementById('games');
+    for (let game of games) {
+        let row = document.createElement('tr');
+        let versionCell = document.createElement('td');
+        versionCell.innerText = game.version.toString();
+        let opponentCell = document.createElement('td');
+        opponentCell.innerText = game.opponent;
+        let outcomeCell = document.createElement('td');
+        outcomeCell.innerText = (game.winner == myTeam ? 'Won' : 'Lost');
+        outcomeCell.style = (game.winner == myTeam ? 'background: #2f2' : 'background: #f22');
+        let logCell = document.createElement('td');
+        let logLink = document.createElement('a');
+        logLink.href = game.log_url;
+        logLink.innerText = 'Visualize';
+        logCell.appendChild(logLink);
+        let reasonCell = document.createElement('td');
+        reasonCell.innerText = (game.winner == myTeam ? game.win_reason : game.lose_reason);
+        row.appendChild(versionCell);
+        row.appendChild(opponentCell);
+        row.appendChild(outcomeCell);
+        row.appendChild(logCell);
+        row.appendChild(reasonCell);
+        container.appendChild(row);
+    }
+}
+
+function createStatsRows(stats) {
+    let container = document.getElementById('stats');
+    for (let opponentStats of stats) {
+        let row = document.createElement('tr');
+        let opponentCell = document.createElement('td');
+        opponentCell.innerText = opponentStats.name;
+        let winsCell = document.createElement('td');
+        winsCell.innerText = opponentStats.stats.wins.toString();
+        let lossesCell = document.createElement('td');
+        lossesCell.innerText = opponentStats.stats.losses.toString();
+        row.appendChild(opponentCell);
+        row.appendChild(winsCell);
+        row.appendChild(lossesCell);
+        container.appendChild(row);
+    }
+}
+
+function loadMore() {
+    request('GET', `games/?page=${gamesPage}&pageSize=50`, '', function() {
+        let response = JSON.parse(this.responseText);
+        if (!response.games) {
+            displayError('Server did not respond with games');
+            return;
+        }
+        createGameRows(response.games);
+        gamesPage += 1;
+    });
+}
+
+</script>
+</head>
+<body>
+    <div class='navbar'>
+        <div class='navbar-section'>
+            <a href="/index.html">AI Comp games</a>
+        </div>
+        <div class='navbar-section'>
+            <a href="/teams.html">Teams</a>
+            <a href="/submit.html">Submit code</a>
+            <a href="/battle.html">Battle</a>
+        </div>
+        <div class='navbar-section'>
+            <a href="/login.html">Log in</a>
+            <a href="/register.html">Register</a>
+        </div>
+    </div>
+    <div class='content-wrapper'>
+        <div id='error' class='error'>Javascript must be enabled for this page to work</div>
+        <div id='team-name' class='big'></div>
+        <div class='box'>
+            <table id='stats'>
+                <tr>
+                    <th>Opponent</th>
+                    <th>Wins</th>
+                    <th>Losses</th>
+                </tr>
+            </table>
+        </div>
+        <div class='box'>
+            <table id='games'>
+                <tr>
+                    <th>Version</th>
+                    <th>Opponent</th>
+                    <th>Outcome</th>
+                    <th>View game</th>
+                    <th>Reason</th>
+                </tr>
+            </table>
+            <button onclick='loadMore()'>Load MOAR</button>
+        </div>
+    </div>
+</body>

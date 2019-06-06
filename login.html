@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>AI Comp Games</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="/style.css" rel=stylesheet>
+<script src="/shared.js" type="text/javascript"></script>
+<script>
+
+window.onload = function() {
+    clearError();
+}
+
+function onSubmit() {
+    let username = document.getElementById('username').value;
+    let password = document.getElementById('password').value;
+    request('POST', 'login/', {
+        username: username,
+        password: password,
+    }, function() {
+        let response = JSON.parse(this.responseText);
+        if (!response.token) {
+            displayError('Server did not respond with token');
+            return;
+        }
+        localStorage.setItem('jwt', response.token);
+        window.location.href = '/teams.html'
+    });
+}
+
+</script>
+</head>
+<body>
+    <div class='navbar'>
+        <div class='navbar-section'>
+            <a href="/index.html">AI Comp games</a>
+        </div>
+        <div class='navbar-section'>
+            <a href="/teams.html">Teams</a>
+            <a href="/submit.html">Submit code</a>
+            <a href="/battle.html">Battle</a>
+        </div>
+        <div class='navbar-section'>
+            <a href="/login.html">Log in</a>
+            <a href="/register.html">Register</a>
+        </div>
+    </div>
+    <div class='content-wrapper'>
+        <div id='error' class='error'>Javascript must be enabled for login to work</div>
+        <div class='box'>
+            <div><input type='text' id='username' placeholder='Username' /></div>
+            <div><input type='password' id='password' placeholder='Password' /></div>
+            <button onclick='onSubmit()'>Login</button>
+            <div style='padding-top: 1em'>
+                Don't have an account? <a href='/register.html'>register here</a>
+            </div>
+        </div>
+    </div>
+</body>
